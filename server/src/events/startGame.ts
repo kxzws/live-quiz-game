@@ -8,7 +8,7 @@ import { EMessageType, StartGameData } from "../types";
 // faster answers earn more points (maximum 1000 points per question)
 // - Wrong answer or no answer: 0 points
 
-const basePoints = 1000;
+const basePoints = 1_000;
 
 export const handleStartGame = (ws: WebSocket, data: StartGameData) => {
   const { gameId } = data;
@@ -65,12 +65,15 @@ export const handleStartGame = (ws: WebSocket, data: StartGameData) => {
         targetGame.questions[questionIndex].correctIndex ===
           playerAnswer.answerIndex;
 
-      const pointsEarned =
-        isAnswerCorrect && targetGame.questionStartTime
-          ? basePoints *
-            ((playerAnswer.timestamp - targetGame.questionStartTime) /
-              (targetGame.questions[questionIndex].timeLimitSec * 1000))
-          : 0;
+      // basePoints * (timeRemaining / timeLimit)
+      const timeLimitMs =
+        targetGame.questions[questionIndex].timeLimitSec * 1000;
+      const timeRemainingMs =
+        timeLimitMs -
+        ((playerAnswer?.timestamp ?? 0) - (targetGame.questionStartTime ?? 0));
+      const pointsEarned = isAnswerCorrect
+        ? Math.round(basePoints * (timeRemainingMs / timeLimitMs))
+        : 0;
 
       db.updatePlayer(player.index, { score: player.score + pointsEarned });
 
@@ -79,7 +82,7 @@ export const handleStartGame = (ws: WebSocket, data: StartGameData) => {
         answered: !!playerAnswer,
         correct: isAnswerCorrect,
         pointsEarned,
-        totalScore: player.score + pointsEarned,
+        totalScore: player.score,
       };
     });
 
@@ -135,7 +138,7 @@ export const handleStartGame = (ws: WebSocket, data: StartGameData) => {
     }
 
     const rankedPlayers = [...targetGame.players].sort(
-      (a, b) => a.score - b.score,
+      (a, b) => b.score - a.score,
     );
 
     const scoreboard = targetGame.players.map((player) => ({
