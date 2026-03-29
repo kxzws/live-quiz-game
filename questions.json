@@ -1,0 +1,40 @@
+{
+  "questions": [
+    {
+      "text": "how many ears do we have?",
+      "options": ["3", "2", "0", "1"],
+      "correctIndex": 1,
+      "timeLimitSec": 10
+    },
+    {
+      "text": "how many eyes do we have?",
+      "options": ["2", "3", "0", "1"],
+      "correctIndex": 0,
+      "timeLimitSec": 10
+    },
+    {
+      "text": "how many brows do we have?",
+      "options": ["3", "1", "0", "2"],
+      "correctIndex": 3,
+      "timeLimitSec": 10
+    },
+    {
+      "text": "how many legs do we have?",
+      "options": ["3", "0", "2", "1"],
+      "correctIndex": 2,
+      "timeLimitSec": 10
+    },
+    {
+      "text": "how many chances do we have?",
+      "options": ["0", "1", "7", "9"],
+      "correctIndex": 3,
+      "timeLimitSec": 15
+    },
+    {
+      "text": "how many partners do we have?",
+      "options": ["3", "2", "idk", "10"],
+      "correctIndex": 2,
+      "timeLimitSec": 15
+    }
+  ]
+}
