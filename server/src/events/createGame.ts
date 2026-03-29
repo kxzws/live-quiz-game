@@ -10,46 +10,10 @@ import { EMessageType, CreateGameData } from "../types";
 export const handleCreateGame = (ws: WebSocket, data: CreateGameData) => {
   const { questions } = data;
 
-  if (!questions || !questions.length) {
-    ws.send(
-      JSON.stringify({
-        type: "error",
-        error: "Invalid questions",
-        id: 0,
-      }),
-    );
-  }
-
   const hostUser = db.findUserByField("ws", ws);
 
-  if (hostUser) {
-    const gameId = randomUUID();
-    const code = generateSimpleCode();
-
-    db.createGame(gameId, {
-      id: gameId,
-      code,
-      hostId: hostUser.index,
-      status: "waiting",
-      questions,
-      currentQuestion: -1,
-      players: [],
-      playerAnswers: new Map(),
-    });
-
-    // personal response to host
-    ws.send(
-      JSON.stringify({
-        type: EMessageType.GAME_CREATED,
-        data: {
-          gameId,
-          code,
-        },
-        id: 0,
-      }),
-    );
-  } else {
-    ws.send(
+  if (!hostUser) {
+    return ws.send(
       JSON.stringify({
         type: EMessageType.ERROR,
         message: `No host user found`,
@@ -57,4 +21,30 @@ export const handleCreateGame = (ws: WebSocket, data: CreateGameData) => {
       }),
     );
   }
+
+  const gameId = randomUUID();
+  const code = generateSimpleCode();
+
+  db.createGame(gameId, {
+    id: gameId,
+    code,
+    hostId: hostUser.index,
+    status: "waiting",
+    questions,
+    currentQuestion: -1,
+    players: [],
+    playerAnswers: new Map(),
+  });
+
+  // personal response to host
+  ws.send(
+    JSON.stringify({
+      type: EMessageType.GAME_CREATED,
+      data: {
+        gameId,
+        code,
+      },
+      id: 0,
+    }),
+  );
 };

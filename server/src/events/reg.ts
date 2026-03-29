@@ -10,7 +10,7 @@ export const handleReg = (ws: WebSocket, data: RegData) => {
   const { name, password } = data;
 
   if (!name || !password) {
-    ws.send(
+    return ws.send(
       JSON.stringify({
         type: EMessageType.REG,
         data: {
@@ -26,37 +26,7 @@ export const handleReg = (ws: WebSocket, data: RegData) => {
 
   const targetUser = db.findUserByField("name", name);
 
-  if (targetUser) {
-    if (getHash(password) === targetUser.password) {
-      db.updateUser(targetUser.index, { ws });
-
-      ws.send(
-        JSON.stringify({
-          type: EMessageType.REG,
-          data: {
-            name,
-            index: targetUser.index,
-            error: false,
-            errorText: "",
-          },
-          id: 0,
-        }),
-      );
-    } else {
-      ws.send(
-        JSON.stringify({
-          type: EMessageType.REG,
-          data: {
-            name,
-            index: "",
-            error: true,
-            errorText: "Invalid name or password",
-          },
-          id: 0,
-        }),
-      );
-    }
-  } else {
+  if (!targetUser) {
     const userId = randomUUID();
 
     db.createUser(userId, {
@@ -66,7 +36,7 @@ export const handleReg = (ws: WebSocket, data: RegData) => {
       ws,
     });
 
-    ws.send(
+    return ws.send(
       JSON.stringify({
         type: EMessageType.REG,
         data: {
@@ -79,4 +49,34 @@ export const handleReg = (ws: WebSocket, data: RegData) => {
       }),
     );
   }
+
+  if (getHash(password) !== targetUser.password) {
+    return ws.send(
+      JSON.stringify({
+        type: EMessageType.REG,
+        data: {
+          name,
+          index: "",
+          error: true,
+          errorText: "Invalid name or password",
+        },
+        id: 0,
+      }),
+    );
+  }
+
+  db.updateUser(targetUser.index, { ws });
+
+  ws.send(
+    JSON.stringify({
+      type: EMessageType.REG,
+      data: {
+        name,
+        index: targetUser.index,
+        error: false,
+        errorText: "",
+      },
+      id: 0,
+    }),
+  );
 };

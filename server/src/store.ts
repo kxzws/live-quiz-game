@@ -39,6 +39,19 @@ export const db = {
     }
   },
   createPlayer: (id: string, player: Player) => players.set(id, player),
+  updatePlayer: (id: string, player: Partial<Player>) => {
+    const target = players.get(id);
+    if (target) {
+      players.set(id, {
+        ...target,
+        ...player,
+      });
+
+      return;
+    }
+
+    throw new Error("No player with such id");
+  },
   deletePlayer: (id: string) => players.delete(id),
 
   getAllGames: () => Array.from(games.values()),

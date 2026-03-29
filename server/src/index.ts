@@ -1,9 +1,15 @@
 import { WebSocketServer } from "ws";
 
-import { handleReg, handleCreateGame, handleJoinGame } from "./events";
+import {
+  handleReg,
+  handleCreateGame,
+  handleJoinGame,
+  handleStartGame,
+  handleAnswer,
+} from "./events";
+import { handleDisconnect } from "./handlers";
 
 import { EMessageType, WSMessage } from "./types";
-import { handleDisconnect } from "./handlers";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -20,7 +26,13 @@ wss.on("connection", (ws) => {
       const { type, data } = message;
 
       if (!type || !data) {
-        throw new Error("Message parsing error");
+        return ws.send(
+          JSON.stringify({
+            type: EMessageType.ERROR,
+            message: "Message parsing error",
+            id: 0,
+          }),
+        );
       }
 
       switch (type) {
@@ -40,6 +52,20 @@ wss.on("connection", (ws) => {
         case EMessageType.JOIN_GAME: {
           // player joins by code
           handleJoinGame(ws, data);
+
+          break;
+        }
+
+        case EMessageType.START_GAME: {
+          // host only
+          handleStartGame(ws, data);
+
+          break;
+        }
+
+        case EMessageType.ANSWER: {
+          // player only
+          handleAnswer(ws, data);
 
           break;
         }
