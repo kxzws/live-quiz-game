@@ -22,7 +22,7 @@ export const handleAnswer = (ws: WebSocket, data: AnswerData) => {
 
   targetGame.playerAnswers.set(targetPlayer.index, {
     answerIndex,
-    timestamp: new Date().valueOf(),
+    timestamp: Date.now(),
   });
 
   // personal response

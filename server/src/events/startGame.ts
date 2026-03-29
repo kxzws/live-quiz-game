@@ -35,8 +35,7 @@ export const handleStartGame = (ws: WebSocket, data: StartGameData) => {
   db.updateGame(gameId, {
     status: "in_progress",
     currentQuestion: questionIndex,
-    questionStartTime: new Date().valueOf(),
-    // questionTimer,
+    questionStartTime: Date.now(),
   });
 
   // broadcast — first question, options only, no correct answer
@@ -57,7 +56,7 @@ export const handleStartGame = (ws: WebSocket, data: StartGameData) => {
   }
 
   // broadcast after timer expires or all answered
-  const timer = setInterval(() => {
+  const handleQuestionsLoop = () => {
     const playerResults = targetGame.players.map((player) => {
       const playerAnswer = targetGame.playerAnswers.get(player.index);
 
@@ -100,68 +99,77 @@ export const handleStartGame = (ws: WebSocket, data: StartGameData) => {
 
     questionIndex += 1;
 
-    if (questionIndex >= targetGame.questions.length) {
-      // latency before the game results
+    if (questionIndex < targetGame.questions.length) {
+      db.updateGame(gameId, {
+        currentQuestion: questionIndex,
+        questionStartTime: Date.now(),
+        playerAnswers: new Map(),
+      });
+
+      // latency between results and questions
       setTimeout(() => {
-        const rankedPlayers = [...targetGame.players].sort(
-          (a, b) => a.score - b.score,
-        );
-
-        const scoreboard = targetGame.players.map((player) => ({
-          name: player.name,
-          score: player.score,
-          rank:
-            rankedPlayers.findIndex((ranked) => ranked.index === player.index) +
-            1,
-        }));
-
+        // broadcast — next question
         for (const player of usersToBroadcast) {
           player.ws?.send(
             JSON.stringify({
-              type: EMessageType.GAME_FINISHED,
+              type: EMessageType.QUESTION,
               data: {
-                scoreboard,
+                questionNumber: questionIndex + 1,
+                totalQuestions: targetGame.questions.length,
+                text: targetGame.questions[questionIndex].text,
+                options: targetGame.questions[questionIndex].options,
+                timeLimitSec: targetGame.questions[questionIndex].timeLimitSec,
               },
               id: 0,
             }),
           );
         }
+      }, 3000);
 
-        db.updateGame(gameId, {
-          status: "finished",
-          currentQuestion: -1,
-          questionStartTime: undefined,
-          playerAnswers: new Map(),
-        });
-      }, 5000);
-
-      clearInterval(timer);
+      setTimeout(
+        handleQuestionsLoop,
+        targetGame.questions[questionIndex].timeLimitSec * 1000,
+      );
 
       return;
     }
 
-    db.updateGame(gameId, {
-      currentQuestion: questionIndex,
-      questionStartTime: new Date().valueOf(),
-      playerAnswers: new Map(),
-      // questionTimer,
-    });
+    const rankedPlayers = [...targetGame.players].sort(
+      (a, b) => a.score - b.score,
+    );
 
-    // broadcast — next question
-    for (const player of usersToBroadcast) {
-      player.ws?.send(
-        JSON.stringify({
-          type: EMessageType.QUESTION,
-          data: {
-            questionNumber: questionIndex + 1,
-            totalQuestions: targetGame.questions.length,
-            text: targetGame.questions[questionIndex].text,
-            options: targetGame.questions[questionIndex].options,
-            timeLimitSec: targetGame.questions[questionIndex].timeLimitSec,
-          },
-          id: 0,
-        }),
-      );
-    }
-  }, targetGame.questions[questionIndex].timeLimitSec * 1000);
+    const scoreboard = targetGame.players.map((player) => ({
+      name: player.name,
+      score: player.score,
+      rank:
+        rankedPlayers.findIndex((ranked) => ranked.index === player.index) + 1,
+    }));
+
+    // latency before the game results
+    setTimeout(() => {
+      for (const player of usersToBroadcast) {
+        player.ws?.send(
+          JSON.stringify({
+            type: EMessageType.GAME_FINISHED,
+            data: {
+              scoreboard,
+            },
+            id: 0,
+          }),
+        );
+      }
+
+      db.updateGame(gameId, {
+        status: "finished",
+        currentQuestion: -1,
+        questionStartTime: undefined,
+        playerAnswers: new Map(),
+      });
+    }, 5000);
+  };
+
+  setTimeout(
+    handleQuestionsLoop,
+    targetGame.questions[questionIndex].timeLimitSec * 1000,
+  );
 };

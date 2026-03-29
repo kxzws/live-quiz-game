@@ -9,44 +9,48 @@ export const handleDisconnect = (ws: WebSocket) => () => {
 
   console.log(`Client disconnected ${currentDate.toString()}`);
 
-  const targetPlayer = db.findPlayerByField("ws", ws);
+  const targetPlayer = db.findUserByField("ws", ws);
 
-  if (targetPlayer) {
-    const targetGame = db
-      .getAllGames()
-      .find(
-        (game) =>
-          !!game.players.find((player) => player.index === targetPlayer.index),
-      );
+  if (!targetPlayer) return;
 
-    if (targetGame) {
-      db.updateGame(targetGame.id, {
-        players: targetGame.players.filter(
-          (player) => player.index !== targetPlayer.index,
-        ),
-      });
+  const targetGame = db
+    .getAllGames()
+    .find((game) =>
+      game.players.map((player) => player.index).includes(targetPlayer.index),
+    );
 
-      const updatedPlayersList = targetGame.players.map(
-        ({ name, index, score }) => ({
-          name,
-          index,
-          score,
+  if (targetGame) {
+    const filteredPlayers = targetGame.players.filter(
+      (player) => player.index !== targetPlayer.index,
+    );
+
+    const hostUser = db.getUser(targetGame.hostId);
+    const usersToBroadcast = hostUser
+      ? [hostUser, ...filteredPlayers]
+      : filteredPlayers;
+
+    db.updateGame(targetGame.id, {
+      players: filteredPlayers,
+    });
+
+    const data = filteredPlayers.map(({ name, index, score }) => ({
+      name,
+      index,
+      score,
+    }));
+
+    for (const user of usersToBroadcast) {
+      user.ws?.send(
+        JSON.stringify({
+          type: EMessageType.UPDATE_PLAYERS,
+          data,
+          id: 0,
         }),
       );
-
-      targetGame.players.forEach((player) => {
-        player.ws?.send(
-          JSON.stringify({
-            type: EMessageType.UPDATE_PLAYERS,
-            data: updatedPlayersList,
-            id: 0,
-          }),
-        );
-      });
     }
-
-    db.updateUser(targetPlayer.index, { ws: undefined });
-
-    db.deletePlayer(targetPlayer.index);
   }
+
+  db.updateUser(targetPlayer.index, { ws: undefined });
+
+  db.deletePlayer(targetPlayer.index);
 };
