@@ -2,7 +2,7 @@ import { WebSocket } from "ws";
 
 import { db } from "../store";
 
-import { EMessageType, JoinGameData } from "../types";
+import { EMessageType, JoinGameData, Player } from "../types";
 
 export const handleJoinGame = (ws: WebSocket, data: JoinGameData) => {
   const { code } = data;
@@ -21,7 +21,7 @@ export const handleJoinGame = (ws: WebSocket, data: JoinGameData) => {
   const gameByCode = db.findGameByField("code", code);
 
   if (joinedUser && gameByCode) {
-    const newPlayer = {
+    const newPlayer: Player = {
       name: joinedUser.name,
       index: joinedUser.index,
       score: 0,
@@ -30,8 +30,9 @@ export const handleJoinGame = (ws: WebSocket, data: JoinGameData) => {
 
     db.createPlayer(joinedUser.index, newPlayer);
 
+    const updatedPlayersList = [...gameByCode.players, newPlayer];
     db.updateGame(gameByCode.id, {
-      players: [...gameByCode.players, newPlayer],
+      players: updatedPlayersList,
     });
 
     // personal response to joining player
@@ -45,26 +46,49 @@ export const handleJoinGame = (ws: WebSocket, data: JoinGameData) => {
       }),
     );
 
-    const playerCount = gameByCode.players.length;
+    const hostUser = db.getUser(gameByCode.hostId);
+    const playerCount = updatedPlayersList.length;
 
     // broadcast to all players in the game
-    gameByCode.players.forEach((player) => {
-      player.ws?.send(
-        JSON.stringify({
-          type: EMessageType.PLAYER_JOINED,
-          data: {
-            playerName: joinedUser.name,
-            playerCount,
-          },
-          id: 0,
-        }),
-      );
-    });
+    const usersToBroadcast = hostUser
+      ? [hostUser, ...updatedPlayersList]
+      : updatedPlayersList;
+
+    for (const player of usersToBroadcast) {
+      setTimeout(() => {
+        player.ws?.send(
+          JSON.stringify({
+            type: EMessageType.PLAYER_JOINED,
+            data: {
+              playerName: joinedUser.name,
+              playerCount,
+            },
+            id: 0,
+          }),
+        );
+      }, 20);
+
+      setTimeout(() => {
+        const data = updatedPlayersList.map(({ name, index, score }) => ({
+          name,
+          index,
+          score,
+        }));
+
+        player.ws?.send(
+          JSON.stringify({
+            type: EMessageType.UPDATE_PLAYERS,
+            data,
+            id: 0,
+          }),
+        );
+      }, 30);
+    }
   } else {
     ws.send(
       JSON.stringify({
         type: EMessageType.ERROR,
-        error: `No game or user found`,
+        message: `No game or user found`,
         id: 0,
       }),
     );

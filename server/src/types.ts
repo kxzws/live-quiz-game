@@ -1,5 +1,22 @@
 import type { WebSocket } from "ws";
 
+export enum EMessageType {
+  // req
+  CREATE_GAME = "create_game",
+  JOIN_GAME = "join_game",
+
+  // req/res
+  REG = "reg",
+
+  // res
+  GAME_CREATED = "game_created",
+  GAME_JOINED = "game_joined",
+  PLAYER_JOINED = "player_joined",
+  UPDATE_PLAYERS = "update_players",
+
+  ERROR = "error",
+}
+
 export interface Player {
   name: string;
   index: string; // unique player id
@@ -35,23 +52,6 @@ export interface User {
   password: string;
   index: string;
   ws?: WebSocket;
-}
-
-export enum EMessageType {
-  // req
-  CREATE_GAME = "create_game",
-  JOIN_GAME = "join_game",
-
-  // req/res
-  REG = "reg",
-
-  // res
-  GAME_CREATED = "game_created",
-  GAME_JOINED = "game_joined",
-  PLAYER_JOINED = "player_joined",
-  UPDATE_PLAYERS = "update_players",
-
-  ERROR = "error",
 }
 
 export interface WSMessage {

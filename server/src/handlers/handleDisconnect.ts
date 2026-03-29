@@ -5,7 +5,9 @@ import { db } from "../store";
 import { EMessageType } from "../types";
 
 export const handleDisconnect = (ws: WebSocket) => () => {
-  console.log("Client disconnected");
+  const currentDate = new Date();
+
+  console.log(`Client disconnected ${currentDate.toString()}`);
 
   const targetPlayer = db.findPlayerByField("ws", ws);
 

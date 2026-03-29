@@ -26,28 +26,34 @@ wss.on("connection", (ws) => {
       switch (type) {
         case EMessageType.REG: {
           handleReg(ws, data);
+
+          break;
         }
 
         case EMessageType.CREATE_GAME: {
           // host sends questions
           handleCreateGame(ws, data);
+
+          break;
         }
 
         case EMessageType.JOIN_GAME: {
           // player joins by code
           handleJoinGame(ws, data);
+
+          break;
         }
 
         default:
           return;
       }
-    } catch (error) {
-      console.error("Message parsing error:", error);
+    } catch (err) {
+      console.error("Message parsing error:", err);
 
       ws.send(
         JSON.stringify({
           type: EMessageType.ERROR,
-          error: "Invalid message",
+          message: `Invalid message: ${err}`,
           id: 0,
         }),
       );
@@ -62,7 +68,7 @@ wss.on("connection", (ws) => {
     ws.send(
       JSON.stringify({
         type: EMessageType.ERROR,
-        error: `Error: ${err}`,
+        message: `Error: ${err}`,
         id: 0,
       }),
     );

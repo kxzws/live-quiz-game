@@ -52,7 +52,7 @@ export const handleCreateGame = (ws: WebSocket, data: CreateGameData) => {
     ws.send(
       JSON.stringify({
         type: EMessageType.ERROR,
-        error: `No host user found`,
+        message: `No host user found`,
         id: 0,
       }),
     );
